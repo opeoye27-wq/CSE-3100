@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/opeyemioyewumi/CSE 3100/CDT/sum'
+relocations:     []
+...
