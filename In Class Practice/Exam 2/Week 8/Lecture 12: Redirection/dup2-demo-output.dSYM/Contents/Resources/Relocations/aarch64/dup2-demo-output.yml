@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     dup2-demo-output
+relocations:     []
+...
