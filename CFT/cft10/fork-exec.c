@@ -18,7 +18,7 @@
 
 int main(int argc, char *argv[])
 {
-	if(argc!=2)
+	if(argc!=2) //assure 2 arguments are passed fr command line
 	{
 		//command line needs to take an argument n
 		printf("%s n\n", argv[0]);
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 
     pid_t pid; 
     int status; 
-    pid = fork(); 
+    pid = fork(); //create the child process
     if (pid == -1)
 	{ 
 
@@ -49,13 +49,16 @@ int main(int argc, char *argv[])
 
 		//TODO:
 		//fill in the code below 
-        char * argv_list[] = {}//fill in your code here}.
+        char * argv_list[] = {"./sum", argv[1], NULL};//fill in your code here 
+        //file to run, number we are passing, must end in NULL
     
         // the execv() only return if error occured. 
         // The return value is -1
 		//TODO:
 		//fill in the code below 
-        execv(//fill your code here); 
+        execv("./sum", argv_list);//fill your code here;
+        //file we are running, prev argv_list with arguments (already ends in null) 
+        perror("exec()"); //only executes if exec fails
         exit(-1); 
     } 
     else

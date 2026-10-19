@@ -1,197 +1,585 @@
-FILE IO
-1. File IO - High Level
-High level file IO is provided by the standard c libary <stdio.h> that abstracts the low level file IOs. Instead of interacting with file descriptors, you work with streams represented by FILE *. The File object is not the file itself and is instead managed by the library to interact with the actual file. It is a lot more convenient than low level file IO.
+# File I/O in C
 
-The FILE object has information like:
+# 1. High-Level File I/O
 
-File descriptor
-IO buffer
-Current stream position
-End of file indicator
-High Level IO Functions
+## 1.1 Overview
 
+High-level file I/O is provided by the standard C library, `stdio.h`, which abstracts low-level file I/O operations.
+
+Instead of working directly with file descriptors, you work with **streams**, represented by `FILE *`.
+
+The `FILE` object is not the actual file. It is managed by the library to help interact with the file.
+
+High-level file I/O is more convenient because it provides **buffering**, which reduces the number of system calls needed to read or write data.
+
+A `FILE` object stores information such as:
+
+- File descriptor
+- I/O buffer
+- Current stream position
+- End-of-file indicator
+
+## High-Level I/O Functions
+
+```c
 #include <stdio.h>
 
-// Open and close files.
+// Open and close files
 FILE *fopen(const char *filename, const char *mode);
 int fclose(FILE *stream);
 
-// Character IO
+// Character I/O
 int fgetc(FILE *stream);
 int fputc(int c, FILE *stream);
 
-// String IO
+// String I/O
 char *fgets(char *buf, int buf_size, FILE *stream);
 int fputs(const char *str, FILE *stream);
 
-// Formatted IO
+// Formatted I/O
 int fscanf(FILE *stream, const char *format, ...);
 int fprintf(FILE *stream, const char *format, ...);
 
-// Block IO - Readings data as chunks of bytes
-size_t fread(void *ptr, size_t size, size_t nmeb, FILE *stream);
-size_t fwrite(const void *ptr, size_t size, size_t nmeb, FILE *stream);
+// Block I/O: read or write chunks of data
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 
-// Positioning
+// File positioning
 int fseek(FILE *stream, long offset, int whence);
 long ftell(FILE *stream);
 void rewind(FILE *stream);
-Default File Streams
+```
 
-Standard Input: stdin
-Standard Output: stdout
-Standard Error: stderr
-1.1 High Level File IO - fopen() and fclose()
+### Default File Streams
+
+C provides three standard streams:
+
+| Stream | Purpose |
+|---|---|
+| `stdin` | Standard input |
+| `stdout` | Standard output |
+| `stderr` | Standard error output |
+
+---
+
+## 1.2 Opening and Closing Files: `fopen()` and `fclose()`
+
+### Function Prototypes
+
+```c
 #include <stdio.h>
 
 FILE *fopen(const char *filename, const char *mode);
 int fclose(FILE *stream);
-function	Description	Parameters	Return
-fopen	Open a file by filename in a certain mode.	<ol><li>filename - The name of the file.</li><li>mode - how you want to open the file.</li>	<ul><li>On Success - Return pointer to FILE stream object.</li><li>On Failure - Return NULL.
-fclose	Close an existing open FILE stream.	<ol><li>stream - The previously opened file stream. </li>	<ul><li>On Success - Return 0.</li><li>On Failure - Return EOF </li></ul>
-File Open Modes
+```
 
-Mode	Read	Write	If File Exists?	If File Does Not Exists?	Initial Position
-r	Yes	No	Open normally	Return NULL	Start of file
-r+	Yes	Yes	Open normally	Return NULL	Start of file
-w	No	Yes	Truncate to 0 length (erase all data)	Creates new file	Start of file
-w+	Yes	Yes	Truncate to 0 length (erase all data)	Creates new file	Start of file
-a	No	Yes	Appends to end	Creates new file	End of file
-a+	Yes	Yes	Appends to end	Creates new file	End of file for write, for read it depends on the system. On unix, the read starts at the beginning of the file.
-1.2 High Level File IO - fgetc() and fputc()
+| Function | Description | Return Value |
+|---|---|---|
+| `fopen()` | Opens a file using the specified filename and mode. | Success: pointer to a `FILE` stream. Failure: `NULL`. |
+| `fclose()` | Closes an open `FILE` stream. | Success: `0`. Failure: `EOF`. |
+
+### File Open Modes
+
+| Mode | Read? | Write? | If File Exists | If File Does Not Exist | Initial Position |
+|---|---|---|---|---|---|
+| `"r"` | Yes | No | Opens normally | Fails (`NULL`) | Beginning |
+| `"r+"` | Yes | Yes | Opens normally | Fails (`NULL`) | Beginning |
+| `"w"` | No | Yes | Truncates file to 0 bytes | Creates file | Beginning |
+| `"w+"` | Yes | Yes | Truncates file to 0 bytes | Creates file | Beginning |
+| `"a"` | No | Yes | Appends to file | Creates file | End |
+| `"a+"` | Yes | Yes | Appends writes to file | Creates file | End for writing; reading position depends on the implementation |
+
+**Important things to remember:**
+
+- `"r"` requires the file to exist.
+- `"w"` erases existing file contents.
+- `"a"` writes new data at the end of the file.
+- The `+` allows both reading and writing.
+- Always check whether `fopen()` returns `NULL`.
+- Close files when you are finished using `fclose()`.
+
+---
+
+## 1.3 Character I/O: `fgetc()` and `fputc()`
+
+### Function Prototypes
+
+```c
 #include <stdio.h>
 
 int fgetc(FILE *stream);
 int fputc(int c, FILE *stream);
-Function	Description	Parameter	Return
-fgetc	Read a single character from a file stream and advance file position.	<ol><li>stream - The opened FILE object to read from. </li></ol>	<ul><li>On Success - Return the character read as an int type to represent all characters including EOF just convert it back (unsigned char).</li><li>On Failure - Returns EOF</li></ul>
-fputc	Write a single character to file stream and advance file position.	<ol><li>c - The character to write.</li><li>stream - The opened FILE object to write to. </li></ol>	<ul><li>On Success - Return the character value you just wrote.</li><li>On Failure - Return EOF</li></ul>
-1.3 High Level File IO - fgets() and fputs()
+```
+
+| Function | Description | Return Value |
+|---|---|---|
+| `fgetc()` | Reads one character from a file stream and advances the file position. | Returns the character as an `int`, or `EOF` at end-of-file or on error. |
+| `fputc()` | Writes one character to a file stream and advances the file position. | Returns the character written, or `EOF` on failure. |
+
+### Key Points
+
+- `fgetc()` returns an `int` so it can represent every possible `unsigned char` value as well as `EOF`.
+- When storing the result of `fgetc()`, use an `int` so you can correctly check for `EOF`.
+- Both functions advance the stream position.
+
+---
+
+## 1.4 String I/O: `fgets()` and `fputs()`
+
+### Function Prototypes
+
+```c
 #include <stdio.h>
 
 char *fgets(char *buf, int buf_size, FILE *stream);
 int fputs(const char *str, FILE *stream);
-Function	Description	Parameter	Return
-fgets	Read characters from a opened FILE stream and stores them as a string into a buffer until it hits a newline (\n is also read into the buffer),reaches end of file (EOF), or it safely fills buf_size - 1 bytes. Advances file position by number of bytes read.	<ol><li>buf - pointer to the buffer that will store what is read. </li><li>buf_size - The size of the buffer in bytes.</li><li>stream - The opened FILE stream for reading. </li></ol>	<ul><li>On Success - return pointer to destination buffer.</li><li>On Failure - return NULL</li></ul>
-fputs	Writes a null terminating string to a opened FILE stream.	<ol><li>str - The null terminating string to write.</li><li>stream - The FILE stream to write to.</li></ol>	<ul><li>On Success - Return non negative number.</li><li>On Failure - Return EOF.</li></ul>
-Note:
+```
 
-fgets will always append a null terminating (\0) into your buffer as long as you give the correct buffer size.
-fgets will keep the newline (\n) in the buffer if it finds one in the FILE stream before it reads buf_size - 1 bytes.
-fputs will use null terminating (\0) in your input string to know when to stop writing. It will not write null terminating (\0) to the FILE stream.
-fputs does not automatically add a newline (\n) at the end when it is done writing.
-1.4 High Level File IO - fprintf() and fscanf()
+| Function | Description | Return Value |
+|---|---|---|
+| `fgets()` | Reads characters into a buffer until a newline is read, EOF occurs, or `buf_size - 1` characters have been read. | Success: pointer to the destination buffer. Failure or no characters read before EOF: `NULL`. |
+| `fputs()` | Writes a null-terminated string to a file stream. | Success: nonnegative value. Failure: `EOF`. |
+
+### Important Notes
+
+**`fgets()`**
+
+- Reads at most `buf_size - 1` characters, leaving room for the terminating `'\0'`.
+- Adds a null terminator to the buffer when it successfully reads a string.
+- Keeps the newline character `'\n'` in the buffer if it reads one.
+- Advances the file position by the number of characters read.
+
+**`fputs()`**
+
+- Uses the null terminator `'\0'` to determine where the input string ends.
+- Does not write the terminating `'\0'` to the file.
+- Does not automatically add a newline at the end.
+
+---
+
+## 1.5 Formatted I/O: `fprintf()` and `fscanf()`
+
+### Function Prototypes
+
+```c
 #include <stdio.h>
 
 int fscanf(FILE *stream, const char *format, ...);
 int fprintf(FILE *stream, const char *format, ...);
-Function	Description	Parameter	Return
-fscanf	Read formatted data from open FILE stream, parsing the text into variables using format specifiers (%d, %c, %s, and others). This means you need to pass the variable addresses.	<ol><li>stream - The open FILE stream to read from.</li><li>format - The formatter string to layout what to read.</li><li>... - Variable pointers (addresses), basically where to store the data parsed from the format specifiers.</li></ol>	<ul><li>On Success - Return the number of input items read successfully matched and then assigned.</li><li>On Failure - Return EOF</li></ul>
-fprintf	Write formatted data to open FILE stream, convert variable values into specified strings.	<ol><li>stream - The open FILE stream to write to.</li><li>format - The formatter string to layout what to write.</li><li>... - Variables or values to write.</li></ol>	<ul><li>On Success - Return the total number of characters (bytes) written to the FILE stream.</li><li>On Failure - Return a negative number.</li></ul>
-Note:
+```
 
-fscanf - If you use %s format specifier to scan or read a string into a buffer, it will automatically append a null terminating (\0) for you. However, beware that fscanf is not know how large the destination buffer or array is, for %s it only stops reading until it meets the first whitespace character. So it is only recommended to be used when you know the exact format of the file you want to read.
-1.5 High Level File IO - fread() and fwrite()
+| Function | Description | Return Value |
+|---|---|---|
+| `fscanf()` | Reads formatted data from a file and stores parsed values in variables. | Returns the number of input items successfully matched and assigned. Returns `EOF` if input fails before the first conversion. |
+| `fprintf()` | Writes formatted data to a file stream. | Returns the number of characters written, or a negative value on failure. |
+
+### `fscanf()` Parameters
+
+- `stream`: the open file stream to read from.
+- `format`: the format string describing the expected input.
+- `...`: addresses of the variables where the parsed values will be stored.
+
+Example:
+
+```c
+int age;
+fscanf(file, "%d", &age);
+```
+
+Notice that `&age` is used because `fscanf()` needs the address where it should store the value.
+
+### `fprintf()` Parameters
+
+- `stream`: the open file stream to write to.
+- `format`: the format string describing the output.
+- `...`: the values to insert into the formatted output.
+
+Example:
+
+```c
+int age = 20;
+fprintf(file, "Age: %d\n", age);
+```
+
+### Important Note About `%s`
+
+When `fscanf()` uses `%s` to read a string:
+
+- It adds a null terminator to the destination buffer.
+- It stops reading at whitespace.
+- It does not know the size of the destination buffer.
+
+This means `%s` can overflow a buffer if the input is too long. Use a width limit, such as `%19s` for a buffer of at least 20 bytes, or use a safer input strategy.
+
+---
+
+## 1.6 Block I/O: `fread()` and `fwrite()`
+
+These functions read and write blocks of data rather than processing one character or formatted value at a time.
+
+### Function Prototypes
+
+```c
 #include <stdio.h>
 
-size_t fread(void *ptr, size_t size, size_t nmeb, FILE *stream);
-size_t fwrite(const void *ptr, size_t size, size_t nmeb, FILE *stream);
-Function	Description	Parameter	Return
-fread	Read specified chunks of bytes from an open FILE stream into a buffer.	<ol><li>ptr - Pointer to buffer to store data read.</li><li>size - The size of a single element in bytes in the buffer.</li><li>nmeb - The number of elements of that size you want to read.</li><li>stream - The open FILE stream to read from.</li></ol>	<ul><li>On Success - Return the exact number of nmeb elements requested to be read.<li>On Failure - Return less than nmeb due to EOF or other errors.</li></ul>
-fwrite	Write specified chunks of bytes to a open FILE stream from a buffer.	<ol><li>ptr - Pointer to buffer with data to write.</li><li>size - The size of a single element in bytes in the buffer.</li><li>nmeb - The number of elements of that size you want to write.</li><li>stream - The open FILE stream to write to.</li></ol>	<ul><li>On Success - Return the exact number of nmeb elements requested to be written.<li>On Failure - Return less than nmeb, can be because disk is full or file permission issue.
-1.6 High Level File IO - Positioning
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+```
+
+| Function | Description | Return Value |
+|---|---|---|
+| `fread()` | Reads data from a file stream into a memory buffer. | Returns the number of complete elements read. |
+| `fwrite()` | Writes data from a memory buffer to a file stream. | Returns the number of complete elements written. |
+
+### Parameters
+
+| Parameter | Meaning |
+|---|---|
+| `ptr` | Pointer to the buffer holding the data or receiving the data. |
+| `size` | Size of each element in bytes. |
+| `nmemb` | Number of elements to read or write. |
+| `stream` | The open file stream. |
+
+### Understanding the Return Value
+
+- If the requested number of elements is processed successfully, the return value equals `nmemb`.
+- If fewer elements are processed, the return value is smaller than `nmemb`.
+- A short read may occur because of EOF or an error.
+- A short write indicates that fewer elements were written than requested.
+
+**Remember:** `fread()` and `fwrite()` return the number of complete elements processed, not the total number of bytes.
+
+---
+
+## 1.7 File Positioning: `fseek()`, `ftell()`, and `rewind()`
+
+These functions let you inspect or change the current position in a file stream.
+
+### Function Prototypes
+
+```c
 #include <stdio.h>
 
 int fseek(FILE *stream, long offset, int whence);
 long ftell(FILE *stream);
 void rewind(FILE *stream);
-Function	Description	Parameter	Return
-fseek	Moves file position indicator to a specific location in the FILE stream, which allows non sequential (random) reading or writing.	<ol><li>stream - The open FILE stream.</li><li>offset - The number of bytes to move from the starting point.</li><li>whence - The starting reference point for the offset. It has to be one of the three constants: <ul><li>SEEK_SET - Start from beginning.</li><li>SEEK_CUR - Start from current position.</li><li>SEEK_END - Start from the end of the file (Past the last byte).</li></ul></li></ol>	<ul><li>On Success - Return 0.</li><li>On Failure - Return non zero value usually -1.</li></ul>
-ftell	Tells you how many bytes the current file position indicator is away from the beginning of the file.	<ol><li>stream - The open FILE stream.</li></ol>	<ul><li>On Success - Return the current byte offset from the beginning of the file in long type.</li><li>On Failure - Return -1 in long type.</li></ul>
-rewind	Reset file position indicator back to beginning of the file and clear any error or EOF flags.	<ol><li>stream - The open FILE stream.</li></ol>	<ul><li>No Return Value.</li></ul>
-2. File IO - Low Level
-Low level IO communicate directly with the OS kernel by making system calls when you call the low level functions. Instead of using FILE streams, you use file descriptors that maps to an actual file.
+```
 
-Note: Making a system call is slow, so if you are writing or reading a lot of data in small chunks you will be making a lot of system calls that will slow down the program. This is why buffering existed with FILE streams so that you don't constantly make system calls and instead make one system call when the buffer is full.
+| Function | Description | Return Value |
+|---|---|---|
+| `fseek()` | Moves the file position indicator to a specified location. | Success: `0`. Failure: nonzero value. |
+| `ftell()` | Reports the current file position. | Success: current position as a `long`. Failure: `-1L`. |
+| `rewind()` | Moves the file position to the beginning and clears the stream's EOF and error indicators. | No return value. |
 
-Low Level IO Functions
+### The `whence` Argument
 
-#include <fcntl.h> // For open() and O_flags
-#include <unistd.h> // For read(), write(), close(), and lseek()
+The `whence` argument specifies the reference point for the offset.
 
-// Open and close files.
-int open(const char *pathname, int flags, /* mode_t mode */);
+| Constant | Meaning |
+|---|---|
+| `SEEK_SET` | Beginning of the file |
+| `SEEK_CUR` | Current position |
+| `SEEK_END` | End of the file |
+
+### Example
+
+```c
+fseek(file, 0, SEEK_SET);  // Move to the beginning
+fseek(file, 5, SEEK_CUR);  // Move forward 5 bytes
+fseek(file, 0, SEEK_END);  // Move to the end
+
+long position = ftell(file);  // Get current position
+
+rewind(file);  // Return to the beginning
+```
+
+`fseek()` allows nonsequential, or random, access to file contents instead of requiring you to read the file from beginning to end.
+
+---
+
+# 2. Low-Level File I/O
+
+## 2.1 Overview
+
+Low-level file I/O interacts more directly with the operating system kernel through system calls.
+
+Instead of using `FILE *` streams, low-level I/O uses **file descriptors**, which are integer values identifying open files or other I/O resources.
+
+Low-level I/O is less abstracted than high-level I/O and requires you to manage byte counts, buffers, and errors more directly.
+
+### Why Buffering Matters
+
+System calls have overhead. If a program reads or writes lots of small chunks, it may make many system calls and run more slowly.
+
+High-level I/O uses buffering to reduce these calls. For example, it may collect multiple small writes in a buffer and make a system call when the buffer needs to be flushed.
+
+### Low-Level I/O Functions
+
+```c
+#include <fcntl.h>   // open() and O_* flags
+#include <unistd.h>  // read(), write(), close(), lseek()
+
+// Open and close files
+int open(const char *pathname, int flags, ...);
 int close(int fd);
 
-// Read and write data in bytes.
+// Read and write bytes
 ssize_t read(int fd, void *buf, size_t count);
 ssize_t write(int fd, const void *buf, size_t count);
 
-// Positioning.
+// File positioning
 off_t lseek(int fd, off_t offset, int whence);
-Default File Descriptors
+```
 
-Standard Input - 0
-Standard Output - 1
-Standard Error - 2
-2.1 Low Level File IO - open() and close()
+The `open()` function accepts a third argument, `mode_t mode`, when creating a file with `O_CREAT`.
+
+### Default File Descriptors
+
+| File Descriptor | Purpose |
+|---|---|
+| `0` | Standard input |
+| `1` | Standard output |
+| `2` | Standard error |
+
+These are commonly accessed through `stdin`, `stdout`, and `stderr` when using high-level I/O.
+
+---
+
+## 2.2 Opening and Closing Files: `open()` and `close()`
+
+### Function Prototypes
+
+```c
 #include <fcntl.h>
 #include <unistd.h>
 
-int open(const char *pathname, int flags, /* mode_t mode */);
+int open(const char *pathname, int flags, ...);
 int close(int fd);
-Function	Description	Parameter	Return
-open	Establish a connection between the lowest available file descriptor and the actual file, so that you can interact with the actual file.	<ol><li>pathname - A null terminating string that contain the path to that file.</li><li>flags - bitwise mask that controls how the file is opened.</li><li>mode - Specify the file permissions, this only applies when creating the new file.</li></ol>	<ul><li>On Success - Return lowest available non negative file descriptor.</li><li>On Failure - Returns -1 and sets global errno.</li></ul>
-close	Release the file descriptor so that it is no longer used.	<ol><li>fd - The valid open integer file descriptor that needs to be closed.</li></ol>	<ul><li>On Success - Return 0.</li><li>On Failure - Return -1 and sets global errno.</li></ul>
-Important open() flags
+```
 
-Flag	Description
-O_RDONLY / O_WRONLY / O_RDWR	You can only choose one access mode: read, write, or both.
-O_CREAT	Create missing file. You will need to set file permission mode if you use this flag.
-O_TRUNC	Truncate existing regular file, if you opened with with suitable write access.
-O_APPEND	Each write is appended to the file end.
-<!--	O_EXCL
-O_CLOEXEC	Close this file descriptor if a running process successfully calls an exec function.
-File Permission - mode_t mode
+| Function | Description | Return Value |
+|---|---|---|
+| `open()` | Opens a file and returns a file descriptor identifying it. | Success: lowest available nonnegative file descriptor. Failure: `-1`, with `errno` set. |
+| `close()` | Closes an open file descriptor, releasing that descriptor for reuse. | Success: `0`. Failure: `-1`, with `errno` set. |
 
-If you use the O_CREAT flag you must set the file permission. The file permission can be represented by 4 digits such as: 0644.
+### `open()` Parameters
 
-Digit Position	For Who?
-1st Digit (0)	Octal - Interpret the following number as base-8 (octal) instead of base-10 (decimal).
-2nd Digit (6)	Owner / User - The one who owns the file.
-3rd Digit (4)	Group - The users who belong to the file's group.
-4th Digit (4)	Others - Everyone else in the system.
-File Permission - How each Individual Digit is Calculated
+- `pathname`: null-terminated path to the file.
+- `flags`: options controlling how the file is opened.
+- `mode`: file permissions used when creating a new file with `O_CREAT`.
 
-Each digit is a single number from 0 to 7. The number is calculated by adding up the following:
+### Important `open()` Flags
 
-4 = Read(r)
-2 = Write(w)
-1 = Execute(x)
-0 = No Permission(-)
-To get a specific combination, you just have to add the numbers together:
+| Flag | Description |
+|---|---|
+| `O_RDONLY` | Open for reading only. |
+| `O_WRONLY` | Open for writing only. |
+| `O_RDWR` | Open for both reading and writing. |
+| `O_CREAT` | Create the file if it does not exist. |
+| `O_TRUNC` | Truncate an existing regular file to zero bytes when opened with suitable write access. |
+| `O_APPEND` | Append writes to the end of the file. |
+| `O_CLOEXEC` | Set close-on-exec for the file descriptor so it is closed when an `exec` operation succeeds. |
 
-7 (4 + 2 + 1) = Read, Write and Execute (rwx)
-6 (4 + 2 + 0) = Read and Write (rw-)
-5 (4 + 0 + 1) = Read and Execute (r-x)
-4 (4 + 0 + 0) = Read Only (r--)
-3 (0 + 2 + 1) = Write and Execute (-wx)
-2 (0 + 2 + 0) = Write Only (-w-)
-1 (0 + 0 + 1) = Execute Only (--x)
-0 (0 + 0 + 0) = No Permission
-Exmaple: 0644 -> rw-r--r--. Owner gets read write access. Group gets only read access. Others also get only read access.
+Choose exactly one of `O_RDONLY`, `O_WRONLY`, and `O_RDWR` as the access mode. Other flags can be combined with the access mode using the bitwise OR operator `|`.
 
-2.2 Low Level File IO - read() and write()
+### Example
+
+```c
+int fd = open("example.txt", O_WRONLY | O_CREAT, 0644);
+
+if (fd == -1) {
+    perror("open");
+}
+```
+
+Here, the file is opened for writing and created if it does not exist. The permission mode `0644` applies when a new file is created.
+
+---
+
+## 2.3 File Permissions: `mode_t mode`
+
+When using `O_CREAT`, you specify the permissions for a newly created file.
+
+A common example is:
+
+```c
+open("example.txt", O_WRONLY | O_CREAT, 0644);
+```
+
+The permission value `0644` is written in **octal (base 8)**.
+
+### Understanding `0644`
+
+| Digit | Applies To | Value |
+|---|---|---|
+| First digit: `0` | Octal notation | Indicates the number is written in base 8. |
+| Second digit: `6` | Owner / user | Read and write |
+| Third digit: `4` | Group | Read only |
+| Fourth digit: `4` | Others | Read only |
+
+### Calculating Permission Values
+
+Each permission digit is calculated by adding the following values:
+
+| Value | Permission | Symbol |
+|---|---|---|
+| `4` | Read | `r` |
+| `2` | Write | `w` |
+| `1` | Execute | `x` |
+| `0` | No permission | `-` |
+
+### Permission Combinations
+
+| Value | Calculation | Permissions |
+|---|---|---|
+| `7` | `4 + 2 + 1` | Read, write, execute (`rwx`) |
+| `6` | `4 + 2 + 0` | Read and write (`rw-`) |
+| `5` | `4 + 0 + 1` | Read and execute (`r-x`) |
+| `4` | `4 + 0 + 0` | Read only (`r--`) |
+| `3` | `0 + 2 + 1` | Write and execute (`-wx`) |
+| `2` | `0 + 2 + 0` | Write only (`-w-`) |
+| `1` | `0 + 0 + 1` | Execute only (`--x`) |
+| `0` | `0 + 0 + 0` | No permissions (`---`) |
+
+### Example: `0644`
+
+`0644` corresponds to `rw-r--r--`:
+
+- **Owner:** read and write (`rw-`)
+- **Group:** read only (`r--`)
+- **Others:** read only (`r--`)
+
+The permissions actually applied to a new file can also be restricted by the process's `umask`.
+
+---
+
+## 2.4 Reading and Writing: `read()` and `write()`
+
+These functions transfer raw bytes using file descriptors.
+
+### Function Prototypes
+
+```c
 #include <unistd.h>
 
 ssize_t read(int fd, void *buf, size_t count);
 ssize_t write(int fd, const void *buf, size_t count);
-Function	Description	Parameter	Return
-read	Read up to specified number of bytes from an open file descriptor into memory buffer.	<ol><li>fd - The open integer file descriptor to read from.</li><li>buf - A pointer to the memory buffer where the read data will be stored.</li><li>count - The maximum number of bytes to read into the buffer.</li></ol>	<ul><li>On Success - Return number of bytes actually read (non negative), sometimes can be fewer than the number of bytes specified and 0 if EOF.</li><li>On Failure - Return -1 and set global errno.</li></ul>
-write	Write up to specified number of bytes from a memory buffer to an open file descriptor.	<ol><li>fd - The open file descriptor to write to.</li><li>buf - A pointer to the memory buffer containing the data to be written. </li><li>count - The number of bytes to write from the buffer.</li></ol>	<ul><li>On Success - Return the number of bytes actually written (non negative), Sometimes can be fewer than the number of bytes specified due to near full disk or system call interruption.</li><li>On Failure - Return -1 and set global errno.</li></ul>
-2.2 Low Level File IO - Postioning
+```
+
+| Function | Description | Return Value |
+|---|---|---|
+| `read()` | Reads up to `count` bytes from a file descriptor into a buffer. | Success: number of bytes read. `0`: EOF. Failure: `-1`, with `errno` set. |
+| `write()` | Writes up to `count` bytes from a buffer to a file descriptor. | Success: number of bytes written. Failure: `-1`, with `errno` set. |
+
+### Parameters
+
+| Parameter | Meaning |
+|---|---|
+| `fd` | The open file descriptor. |
+| `buf` | Pointer to the memory buffer used for reading or writing. |
+| `count` | Maximum number of bytes to read or number of bytes requested for writing. |
+
+### Important Notes About `read()`
+
+- It may read fewer bytes than requested.
+- A return value of `0` means EOF for a regular file.
+- A return value of `-1` indicates an error.
+- The returned byte count tells you how much data was actually read.
+
+### Important Notes About `write()`
+
+- It may write fewer bytes than requested.
+- A short write can occur for reasons such as interruptions or resource limitations.
+- A successful return does not necessarily mean all requested bytes were written.
+- The return value tells you how many bytes were actually written.
+
+**Remember:** Both functions work with bytes, not C strings. They do not automatically add a null terminator to buffers.
+
+---
+
+## 2.5 File Positioning: `lseek()`
+
+`lseek()` changes the file offset associated with a file descriptor, allowing nonsequential reading or writing.
+
+### Function Prototype
+
+```c
 #include <unistd.h>
 
 off_t lseek(int fd, off_t offset, int whence);
-Function	Description	Parameter	Return
-lseek	Reposition the read or write file offset associated with a file descriptor to a new location	<ol><li>fd - The open integer file descriptor you want to change the offset of.</li><li>offset - The number of bytes to move relative to the start position.</li><li>whence - The start position. It must be one of the three constants: <ul><li>SEEK_SET - Beginning of file.</li><li>SEEK_CUR - Current Location of file.</li><li>SEEK_END - End of file (past the last byte).</li></ul></li></ol>	<ul><li>On Success - Return the resulting file offset in bytes from the beginning of the file (non negative).off_t is an signed int.</li><li>On Failure - Returns -1 and set global errno.</li></ul>
+```
+
+| Function | Description | Return Value |
+|---|---|---|
+| `lseek()` | Repositions the file offset associated with a file descriptor. | Success: resulting offset from the beginning of the file. Failure: `(off_t) -1`, with `errno` set. |
+
+### Parameters
+
+- `fd`: the open file descriptor.
+- `offset`: the offset used to calculate the new position.
+- `whence`: the reference point for the offset.
+
+### The `whence` Argument
+
+| Constant | Meaning |
+|---|---|
+| `SEEK_SET` | Beginning of the file |
+| `SEEK_CUR` | Current file offset |
+| `SEEK_END` | End of the file |
+
+### Example
+
+```c
+lseek(fd, 0, SEEK_SET);  // Move to the beginning
+lseek(fd, 5, SEEK_CUR);  // Move forward 5 bytes
+lseek(fd, 0, SEEK_END);  // Move to the end
+
+off_t position = lseek(fd, 0, SEEK_CUR);  // Get current offset
+```
+
+The returned value is the new file offset measured in bytes from the beginning of the file.
+
+`off_t` is the type used to represent file offsets.
+
+---
+
+# 3. High-Level vs. Low-Level File I/O
+
+| Feature | High-Level I/O | Low-Level I/O |
+|---|---|---|
+| Main representation | `FILE *` stream | Integer file descriptor |
+| Header | `<stdio.h>` | `<fcntl.h>` and `<unistd.h>` |
+| Open a file | `fopen()` | `open()` |
+| Close a file | `fclose()` | `close()` |
+| Read data | `fgetc()`, `fgets()`, `fscanf()`, `fread()` | `read()` |
+| Write data | `fputc()`, `fputs()`, `fprintf()`, `fwrite()` | `write()` |
+| Change file position | `fseek()` | `lseek()` |
+| Get current position | `ftell()` | `lseek(fd, 0, SEEK_CUR)` |
+| Buffering | Library-managed buffering | Direct system calls; no `stdio` stream buffering |
+| Typical advantage | Convenient and easier to use | More direct control over byte-level I/O |
+
+## 4. Quick Review: What to Remember
+
+### High-Level I/O
+
+- `FILE *` represents a stream managed by the C library.
+- `fopen()` opens a stream; `fclose()` closes it.
+- `"r"` reads, `"w"` writes and truncates, and `"a"` appends.
+- `fgets()` reads a bounded amount of text and retains a newline if it reads one.
+- `fputs()` does not automatically add a newline.
+- `fscanf()` reads formatted data; `fprintf()` writes formatted data.
+- `fread()` and `fwrite()` process blocks of elements.
+- `fseek()`, `ftell()`, and `rewind()` manage stream positions.
+
+### Low-Level I/O
+
+- File descriptors are integers.
+- `open()` opens a file; `close()` closes a file descriptor.
+- `read()` and `write()` operate on bytes.
+- A successful `read()` or `write()` may process fewer bytes than requested.
+- `lseek()` changes the file offset.
+- `O_CREAT` creates a missing file; `O_TRUNC` truncates an existing file; `O_APPEND` appends writes.
+- Permission values such as `0644` use octal notation.
+- Check return values for errors, and use `perror()` to report system-call errors.
+
+**Main takeaway:** High-level I/O gives you convenient, buffered stream operations. Low-level I/O gives you more direct control through file descriptors and system calls.
