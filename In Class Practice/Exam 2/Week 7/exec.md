@@ -53,6 +53,7 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
+
 Example: Calling execlp()
 
 #include <stdio.h>
@@ -85,6 +86,7 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
+
 Example: Calling execv()
 
 #include <stdio.h>
@@ -119,6 +121,7 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
+
 Example: Calling execvp()
 
 #include <stdio.h>
@@ -153,6 +156,7 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
+
 3. Important Stuff
 Exec does not create a new process, it transforms the existing calling process.
 Exec can fail so you need to handle cases where it does. Terminate the child that called on exec.
