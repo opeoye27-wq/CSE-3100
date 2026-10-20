@@ -6,12 +6,12 @@
 
 // encrypt the message and write the result to file fd
 void write_secret_message(char *message, char key, int fd) {
-  int len = strlen(message); //getting the length of the message
+  int len = strlen(message);
   printf("len = %d\n", len);
   int msg[len];
 
   for (int i = 0; i < len; i++) {
-    msg[i] = message[i] ^ key; //storing message[i] OR key in the msg array
+    msg[i] = message[i] ^ key;
     // printf("%c", msg[i]);
   }
   write(fd, msg, len * sizeof(int));
