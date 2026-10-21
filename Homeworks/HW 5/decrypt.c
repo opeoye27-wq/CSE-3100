@@ -41,12 +41,22 @@ void read_file_to_array(char *filename)
 //Return 0 otherwise
 //Be efficient in implementing this function
 //Efficiency is needed to pass test cases in limited time
-int in_dict(char *word)
+int in_dict(char *word) //since dictonary is sorted use binary search
 {
+    int low = 0;
+    int high = word_count - 1;
 
-
-
-
+    while(low <= high)
+    {
+        int mid = low + (high - low) / 2;
+        if (strcmp(word, words[mid]) == 0) //compare with the middle word
+            return 1;
+        else if (strcmp(word, words[mid]) < 0) //if it comes before the mid point
+            high = mid - 1;
+        else if (strcmp(word, words[mid]) > 0) //if it comes after the mid point
+            low = mid + 1;
+    }
+    return 0;
 }
 
 //TODO
@@ -57,10 +67,13 @@ int in_dict(char *word)
 
 void decryption(unsigned char key, unsigned char shift, const int *encrypted, int len, char *decrypted)
 {
-
-
-
-
+    //Encryption: msg[i] = (message[i] << shift) ^ key; so need to this backwards for each char
+    //E = (C << s) ^ k --> E ^ k = C << s --> C = (E ^ k) >> s
+    for(int i = 0; i < len; i ++)
+    {
+        decrypted[i] = (encrypted[i] ^ key) >> shift;
+    }
+    decrypted[len] = '\0'; //adding null terminator
 }
 
 //TODO
@@ -68,14 +81,21 @@ void decryption(unsigned char key, unsigned char shift, const int *encrypted, in
 //the score is used to determine whether msg is the original message
 int message_score(const char *msg)
 {
+    //score for each word to see if its in dict
+    //since msg is a const make a copy
+    char copy[MAX];
+    strcpy(copy, msg);
 
+    char *word = strtok(copy, " ");
+    int score = 0;
 
-
-
-
-
-
-
+    while(word != NULL)
+    {
+        if(in_dict(word) == 1)
+            score ++;
+        word = strtok(NULL, " "); //searching for individual words in message
+    }
+    return score;
 }
 
 //search using all the (key, shift) combinations
@@ -107,12 +127,25 @@ void search(const int *encrypted, int len, char *message)
 //return number of bytes read
 int read_encrypted(char *filename, int *encrypted)
 {
-
-
-
-
-
-
+    //open the file in read-only mode
+    int fd = open(filename, O_RDONLY);
+    //check if file successfully opened
+    if(fd < 0)
+    {
+		perror("open()");
+        return -1;
+    }
+    //copy data into encrypted
+    ssize_t r = read(fd, encrypted, MAX * sizeof(int)); //encrypted holds 10240 integers at 4 bytes each
+    if(r < 0) //meaning read failed
+    {
+        perror("read()");
+        close(fd);
+        return -1;
+    }
+    close(fd); //close the file
+    
+    return r / sizeof(int);
 }
 
 //Do not change the main() function
@@ -126,7 +159,7 @@ int main(int argc, char *argv[])
 
 	read_file_to_array("dict.txt");
 
-	int encrypted[MAX];
+	int encrypted[MAX]; //means encrypted can hold 10240 intgers
 	int len = read_encrypted(argv[1], encrypted);
 	
 	char message[MAX];
