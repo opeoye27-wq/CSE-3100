@@ -37,11 +37,13 @@ int main(int argc, char *argv[])
     //We use the array b to save the moves the walker makes
     //Essentially, we save each index that the walker reaches in array b
     //For example, b[0] = 3 since the walker goes to index 3 for the first move
+    
+    //both children and parent get a copy of all the code until fork()
     int b[10]; //index the walker reaches   
     int cur = 0; //current index we are at
-    int moves = 0; //number of moves, max is 10
+    int moves = 0; //number of moves we've done, max is 10
 
-    int n = 10;
+    int n = 10; //max moves
 
     for(int i = 0; i< n; i++) 
     {
@@ -56,12 +58,12 @@ int main(int argc, char *argv[])
                 print_solution(b, moves); //call print_solution
                 return 0;
             }
-            else if(cur + a[cur] >= 0 && cur + a[cur] <n)
+            else if(cur + a[cur] >= 0 && cur + a[cur] <n) //if current + next move >= 0 and still under max moves (moving right)
             {
                 //Add your code here
-                cur = cur + a[cur];
-                b[moves] = cur;
-                moves++;
+                cur = cur + a[cur]; //move right to next spot
+                b[moves] = cur; //record index we've moved to
+                moves++; //increase number of moves
             }
         }
         else
@@ -76,14 +78,12 @@ int main(int argc, char *argv[])
                 print_solution(b, moves);
                 return 0;
             }
-            else if(cur - a[cur] >= 0 && cur - a[cur] <n)
+            else if(cur - a[cur] >= 0 && cur - a[cur] <n) //if current - next move >= 0 and still under max moves (moving left)
             {
                 //Add your code here
                 cur = cur - a[cur];
                 b[moves] = cur;
                 moves++;
-
-
             }
         }
     }

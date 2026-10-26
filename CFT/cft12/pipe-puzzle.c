@@ -38,6 +38,8 @@ void write_solution(int b[], int moves, int pd)
     }
     strcat(buffer, "\n");
     //Add one line of code to write the buffer to the pipe pd
+    // write(file_descriptor, data, number_of_bytes) + strlen() gives size of string w/o '\0' terminator
+    write(pd, buffer, strlen(buffer));
 
 }
 
@@ -108,12 +110,12 @@ int main(int argc, char *argv[])
                     close(pd[1]);
                     return 0;
                 }
-                else if(cur + a[cur] >= 0 && cur + a[cur] <n)
+                else if(cur + a[cur] >= 0 && cur + a[cur] <n)// moving to the right
                 {
                     //Add your code here
-
-
-
+                    b[moves] = cur + a[cur];
+                    moves += 1;
+                    cur += a[cur];
                 }
             }
             else
@@ -130,10 +132,12 @@ int main(int argc, char *argv[])
                     close(pd[1]);
                     return 0;
                 }
-                else if(cur - a[cur] >= 0 && cur - a[cur] <n)
+                else if(cur - a[cur] >= 0 && cur - a[cur] <n) //moving left
                 {
                     //Add your code here
-
+                    b[moves] = cur - a[cur];
+                    moves += 1;
+                    cur -= a[cur];
 
 
                 }
