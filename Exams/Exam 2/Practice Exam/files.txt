@@ -1,0 +1,5 @@
+files.txt
+soup_du_jour
+soup_du_jour.c
+
+Command: ls > files (Output Redirection)

@@ -11,13 +11,13 @@
 
 // Search TODO to find the functions you need to work on
 
-#define MAX_NUM_PROGRAMS 10
-#define FD_STDIN    0
-#define FD_STDOUT   1
-#define PIPEFD_READ     0
-#define PIPEFD_WRITE    1
+#define MAX_NUM_PROGRAMS 10 //max number of programs
+#define FD_STDIN    0 //stdin
+#define FD_STDOUT   1 //stdout
+#define PIPEFD_READ     0 //read end of pipe
+#define PIPEFD_WRITE    1 //write end of pipe
 
-void die(char *s)
+void die(char *s) //errors
 {
     fprintf(stderr, "Error: %s\n", s);
     if (errno)
@@ -70,6 +70,56 @@ typedef struct program_tag {
 void start_program(Program *programs, int num_programs, int cur) 
 {
     // TODO
+    pid_t pid = fork();
+
+    if (pid == -1)
+        die("fork() failed.");
+    
+    if (pid == 0) //in child process - set up input/ output and run requested command
+    { //if this command has an input pipe, redirect stdin to pipe's write end
+       if (programs[cur].fd_in != -1)
+       {
+            if (dup2(programs[cur].fd_in, FD_STDIN) == -1) //check if dup2 works (changing standard input to input pipe)
+                die("dup2() failed.");
+       }
+       if (programs[cur].fd_out != -1)
+       {
+            if (dup2(programs[cur].fd_out, FD_STDOUT) == -1)
+                die("dup2() failed.");
+       }
+       for (int i = 0; i < num_programs; i ++)
+       {
+            //close this programsn input fd if it has one
+            if (programs[i].fd_in != -1)
+                close(programs[i].fd_in);
+            //close this programsn output fd if it has one
+            if (programs[i].fd_out != -1)
+                close(programs[i].fd_out);
+       }
+        //replace child process with requested command
+        //argv[0] command name, argv arguments
+        //use execvp to search PATH for executable
+        execvp(programs[cur].argv[0], programs[cur].argv);
+        //check execvp worked
+        perror("execvp()");
+        _exit(EXIT_FAILURE);
+    }
+    else //parent process
+    {
+        //don't wait, keep running so it can launch remaning commands and wait for children later; save child's PID
+        programs[cur].pid = pid;
+        if (programs[cur].fd_in != -1)
+        {
+            close(programs[cur].fd_in);
+            programs[cur].fd_in = -1;
+        }
+
+        if (programs[cur].fd_out != -1)
+        {
+            close(programs[cur].fd_out);
+            programs[cur].fd_out = -1;
+        }
+    }
 }
 
 /* Wait on a program. 
@@ -91,6 +141,11 @@ int wait_on_program(Program *prog)
         return -1;
 
     // TODO
+    //wait for specific child process to finish, store exit status, use option 0 to wait normally
+    if (waitpid(prog->pid, &exitStatus, 0) == -1)
+        return -1;
+
+    //will return if child exited normally
     return WEXITSTATUS(exitStatus);
 }
 
@@ -112,6 +167,20 @@ int wait_on_program(Program *prog)
 void prepare_pipes(Program *programs, int num_programs)
 {
     // TODO
+    //need (num_programs - 1) pipes
+    for (int i = 0; i < num_programs - 1; i ++)
+    {
+        int fd[2];
+
+        if (pipe(fd) == -1) //create a pipe, fd[0] is read, fd[1] is write
+            die("pipe() failed.");
+        
+        //make the current process write into this pipe
+        programs[i].fd_out = fd[PIPEFD_WRITE];
+
+        //make next program read from this pipe
+        programs[i + 1].fd_in = fd[PIPEFD_READ];
+    }
 }
 
 /*********************************************************/

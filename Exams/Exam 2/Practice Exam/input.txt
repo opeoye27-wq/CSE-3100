@@ -1,0 +1,10 @@
+a
+Command: ./program < input.txt (takes input file from input.txt)
+
+Command: allows you to pass multiple lines directly in terminal instead of reading them from file
+Searches until it finds "END"
+./program << END
+Hello
+My name is Opeyemi
+Goodbye
+END

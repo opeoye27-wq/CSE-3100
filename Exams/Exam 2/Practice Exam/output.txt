@@ -1,0 +1,3 @@
+Good morningHello
+
+Command: echo "Hello" >> output.txt (append output)
