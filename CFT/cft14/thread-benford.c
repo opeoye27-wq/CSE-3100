@@ -14,9 +14,9 @@ unsigned long a[MAX];
 
 struct thread_data
 {
-    int thread_num;
+    int thread_num; //identifies thread 
     int i, j;							//the staring and ending index
-    unsigned long freq[DIGITS];			// results
+    unsigned long freq[DIGITS];			// results, stores the frequencies calculated by that thread
 };
 
 //initialize the array
@@ -31,7 +31,7 @@ void init_array(unsigned long a[], int n)
 
 //get the first digit of the long integer k
 int first_digit(unsigned long k)
-{
+{ //repeatedly divides by 10 until only first digit remains
     while(k >= DIGITS)
 	{
         k = k/DIGITS;
@@ -42,10 +42,10 @@ int first_digit(unsigned long k)
 //there are total n numbers
 void frequencies(unsigned long a[], int n, unsigned long freq[DIGITS])
 {
-    for(int k=0; k<DIGITS; k++)
+    for(int k=0; k<DIGITS; k++) //initialize frequencies to zero
         freq[k] = 0;
 
-    for(int i = 0; i<n; i++)
+    for(int i = 0; i<n; i++) //count the first digits
     {
         int m = first_digit(a[i]);
         freq[m] ++;
@@ -56,18 +56,19 @@ void* thread_freq(void* threadarg)
 {
     struct thread_data* my_data = (struct thread_data*) threadarg;
 	//fill in code below, only line is needed
+    frequencies(a + my_data->i, my_data->j - my_data->i + 1, my_data->freq);
     
 	pthread_exit(NULL);
 }
 
 int main(int argc, char* argv[]) 
 {
-	if(argc!=3)
+	if(argc!=3)    
 	{
 		printf("Usage: %s n NUM_THREADS\n", argv[0]);
 		exit(-1);
 	}
-	int n = atoi(argv[1]);
+	int n = atoi(argv[1]); //amount of numbers we're working with
 	assert(n>=1 && n<=MAX);
 	int NUM_THREADS = atoi(argv[2]);
 	assert(NUM_THREADS >=1 && NUM_THREADS <=10);
@@ -79,9 +80,9 @@ int main(int argc, char* argv[])
     int rc, t;
 	for( t=0; t<NUM_THREADS; t++ ) {
         thread_data_array[t].thread_num = t;
-        thread_data_array[t].i = t*n/NUM_THREADS;
-		thread_data_array[t].j = (t+1)*n/NUM_THREADS - 1;
-        rc = pthread_create(&threads[t], NULL, thread_freq, &thread_data_array[t]);
+        thread_data_array[t].i = t*n/NUM_THREADS; //starting point of each thread
+		thread_data_array[t].j = (t+1)*n/NUM_THREADS - 1; //ending point of each thread
+        rc = pthread_create(&threads[t], NULL, thread_freq, &thread_data_array[t]); //creating threads and passing in main func to run
         if (rc) {
             printf("ERROR; return code from pthread_create() is %d\n", rc);
             exit(-1);
@@ -89,13 +90,18 @@ int main(int argc, char* argv[])
     }
     unsigned long freq[DIGITS] ={0};
     for( t=0; t<NUM_THREADS; t++ ) {
-        rc = pthread_join( threads[t], NULL );
+        rc = pthread_join( threads[t], NULL ); //have main thread wait for other threads
         if( rc ){
             printf("ERROR; return code from pthread_join() is %d\n", rc);
             exit(-1);
         }
 		//fill in code below
 		//no more than two lines of code expected
+        for (int i = 0; i < DIGITS; i ++)
+        {
+            freq[i] += thread_data_array[t].freq[i];
+        }
+
 
 
     }

@@ -27,7 +27,7 @@
  */
 TMatrix * newMatrix(unsigned int nrows, unsigned int ncols)
 {
-    if (! nrows || ! ncols)
+    if (! nrows || ! ncols) 
         return NULL;
 
     /* Allocate space for TMatrix */
@@ -168,14 +168,14 @@ int compareMatrix(TMatrix * m, TMatrix *n)
  */
 TMatrix * addMatrix(TMatrix *m, TMatrix *n)
 {
-    if (    m == NULL || n == NULL
+    if (    m == NULL || n == NULL //make sure its not a NULL matrix
          || m->nrows != n->nrows || m->ncols != n->ncols )
         return NULL;
 
-    TMatrix * t = newMatrix(m->nrows, m->ncols);
+    TMatrix * t = newMatrix(m->nrows, m->ncols); //create a new matrix of the same size
     if (t == NULL)
         return t;
-    for (unsigned int i = 0; i < m->nrows; i++)
+    for (unsigned int i = 0; i < m->nrows; i++) //use a double for loop to iterate through and add new values
         for (unsigned int j = 0; j < m->ncols; j++)
             t->data[i][j] = m->data[i][j] + n->data[i][j];
     return t;

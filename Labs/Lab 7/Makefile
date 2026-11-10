@@ -3,7 +3,7 @@ OBJS=test-madd.o matrix.o madd.o
 SRCS=$(patsubst %.o,%.c,$(OBJS))
 HEADERS=matrix.h 
 CC=gcc
-CFLAGS= -Wall -pthread -std=c99 -g
+CFLAGS= -Wall -pthread -std=c99 -g -O2
 
 all : $(TARGET)
 
