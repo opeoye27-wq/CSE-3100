@@ -6,6 +6,7 @@
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
+#include <time.h>
 
 // search TODO to find the place you need to work on
 
@@ -162,6 +163,28 @@ void * thread_c(void * arg_in)
     //      wait for a guess from thread_p 
     //      call gmn_check() 
     //      send the result and, if the guess is correct, the final message to thread_p
+    
+    int result;
+    //send max val to P
+    pthread_mutex_lock(&arg->mutex); 
+    arg->max = gmn_get_max();
+    arg->status = S_MAX;
+
+    pthread_cond_signal(&arg->cond_result);
+    pthread_mutex_unlock(&arg->mutex);
+
+    do {
+        pthread_mutex_lock(&arg->mutex);
+        while (arg->status != S_GUESS)
+            pthread_cond_wait(&arg->cond_guess, &arg->mutex);
+        result = gmn_check(&gmn, arg->guess); //check P's guess
+        arg->result = result;
+        if (result == 0)
+            strcpy(arg->message, gmn_get_message(&gmn));
+        arg->status = S_RESULT;
+        pthread_cond_signal(&arg->cond_result);
+        pthread_mutex_unlock(&arg->mutex);
+    } while (result != 0);
 
     return NULL;
 }
@@ -182,6 +205,12 @@ void * thread_p(void *arg_in)
 
     // TODO
     //      get max from thread_c
+    pthread_mutex_lock(&arg->mutex);
+    while (arg->status != S_MAX)
+        pthread_cond_wait(&arg->cond_result, &arg->mutex);
+
+    max = arg->max;
+    pthread_mutex_unlock(&arg->mutex);
 
     do { 
         guess = (min + max)/2;
@@ -190,6 +219,18 @@ void * thread_p(void *arg_in)
         // TODO
         //     send guess to thread_c
         //     wait for the result from thread_c (copy arg->result to result!)
+        pthread_mutex_lock(&arg->mutex);
+
+        arg->guess = guess;
+        arg->status = S_GUESS;
+
+        pthread_cond_signal(&arg->cond_guess);
+
+        while (arg->status != S_RESULT)
+            pthread_cond_wait(&arg->cond_result, &arg->mutex);
+
+        result = arg->result;
+        pthread_mutex_unlock(&arg->mutex);
 
         if (result > 0)
             min = guess + 1;
@@ -234,7 +275,27 @@ int main(int argc, char *argv[])
 
     // TODO
     // Create the two threads and wait for them to finish
+    arg.status = S_INIT;
 
+    check_pthread_return(pthread_mutex_init(&arg.mutex, NULL), "pthread_mutex_init");
+    check_pthread_return(pthread_cond_init(&arg.cond_guess, NULL), "pthread_cond_init");
+    check_pthread_return(pthread_cond_init(&arg.cond_result, NULL), "pthread_cond_init");
+
+    //create threads
+    pthread_t threadC;
+    pthread_t threadP;
+
+    check_pthread_return(pthread_create(&threadC, NULL, thread_c, &arg), "pthread_create C");
+    check_pthread_return(pthread_create(&threadP, NULL, thread_p, &arg), "pthread_create P");
+
+    //wait for both threads to finish
+    check_pthread_return(pthread_join(threadC, NULL), "pthread_join C");
+    check_pthread_return(pthread_join(threadP, NULL), "pthread_join P");
+
+    //destroy synchronization objects
+    pthread_mutex_destroy(&arg.mutex);
+    pthread_cond_destroy(&arg.cond_guess);
+    pthread_cond_destroy(&arg.cond_result);
     
     return 0;
 }
