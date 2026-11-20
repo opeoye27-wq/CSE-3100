@@ -47,11 +47,11 @@
 
 typedef struct {
     int     data;                //integer to be tested
-    int     ready;                //data ready for testing?
+    int     ready;                //data ready for testing? (0 for no, 1 for yes)
     int     checked;            //used by SET_BIT and CHECK_BIT 
     pthread_mutex_t mutex;        //mutex
-    pthread_cond_t ready_cond;    //ready condition varible
-    pthread_cond_t processed_cond;    //processed condition variable
+    pthread_cond_t ready_cond;    //ready condition varible (new number available, consumers wait)
+    pthread_cond_t processed_cond;    //processed condition variable (all consumers finished, producer waits)
 } data_t;
 
 typedef struct {
@@ -75,11 +75,9 @@ void * consumer(void *t)
     while (! done) 
     {
         //Fill in code below on mutex and condition variable
-
-
-
-
-
+        pthread_mutex_lock(&pdata->mutex); //lock the mutex
+        while(pdata->ready == 0 || CHECK_BIT(pdata->checked, my_id)) //check if data is ready if not wait
+            pthread_cond_wait(&pdata->ready_cond, &pdata->mutex);
 
         //if the data produced is negative, we set done to 1
         if (pdata->data < 0) {
@@ -87,23 +85,28 @@ void * consumer(void *t)
         }
         else 
         { 
-            if ((pdata->data % p) == 0) 
+            if ((pdata->data % p) == 0)  //the number IS divisible by this consumer's prime
             {
                 //fill in the code below
-
-
-
+                //this number isn't prime so we can ask producer to produce another number
+                printf("%d is not a prime.\n", pdata->data);
+                pdata->ready = 0;
+                pthread_cond_signal(&pdata->processed_cond);
             }
-            else 
+            else //the number is NOT divisible by this consumers prime
             {
                 //fill in the code below
-
-
-
-
+                //set the bit
+                SET_BIT(pdata->checked, my_id);
+                if (pdata->checked == FLAG){
+                    printf("%d is a prime.\n", pdata->data);
+                    pdata->ready = 0;
+                    pthread_cond_signal(&pdata->processed_cond);
+                }
             }
         }
 		//fill in the code below
+        pthread_mutex_unlock(&pdata->mutex);
     }
     return NULL;
 }
@@ -135,21 +138,20 @@ void *producer(void *t)
     while (! done) 
     {
         //Fill in code below on mutex and condition variable
-
-
-
+        pthread_mutex_lock(&pdata->mutex);
+        while(pdata->ready == 1)
+            pthread_cond_wait(&pdata->processed_cond, &pdata->mutex);
 
         //read an integer to v
         int v = read_integer();
         //fill in the code below to produce data and wake up consumers
-        
-        
-
-
-
+        pdata->data = v;
+        pdata->checked = 0; 
+        pdata->ready = 1;
+        pthread_cond_broadcast(&pdata->ready_cond);
         done = (v < 0);
+        pthread_mutex_unlock(&pdata->mutex);
     }
-
     return NULL;
 }
 
