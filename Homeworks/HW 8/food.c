@@ -13,27 +13,53 @@ typedef struct {
 } list_t;
 
 typedef struct {
-	int size;
-        int buf[MAX][3];
-        int remain;
+		int size; //max # of items in each colum
+    	int buf[MAX][3]; // 2D array to hold food items (drinks, fries, and burgers)
+        int remain; //remaining # of items to serve
         int counts[3];            //current indexes
-        pthread_mutex_t mutex;
+        pthread_mutex_t mutex; //mutex protects buf
         pthread_cond_t produce_cond;
         pthread_cond_t consume_cond;
 }two_d_buffer;
 
-void add_to_buffer(int item, int col, two_d_buffer *p)
+void add_to_buffer(int item, int col, two_d_buffer *p) //adds item to the end of the column col
 {
 	//TODO
 	//fill in code below
+	pthread_mutex_lock(&p->mutex); //lock the mutex
+
+	while(p->counts[col] == p->size) //wait while the column is full
+		pthread_cond_wait(&p->produce_cond, &p->mutex);
 	
+	p->buf[p->counts[col]][col] = item;
+	p->remain -= 1;
+	p->counts[col]++;
+
+	pthread_cond_signal(&p->consume_cond);
+	pthread_mutex_unlock(&p->mutex);
 }
 
 void remove_from_buffer(int *a, int *b, int *c, two_d_buffer *p)
 {
 	//TODO
 	//fill in code below
+	pthread_mutex_lock(&p->mutex);
+
+	while(!p->counts[0]  || !p->counts[1] || !p->counts[2])
+		pthread_cond_wait(&p->consume_cond, &p->mutex);
 	
+	*a = p->buf[0][0];
+	*b = p->buf[0][1];
+	*c = p->buf[0][2];
+
+	for (int i = 0; i < 3; i ++){
+		for (int j = 0; j < p->counts[i] - 1; j ++){
+			p->buf[j][i] = p->buf[j + 1][i];
+		}
+		p->counts[i]--;
+	}
+	pthread_cond_broadcast(&p->produce_cond);
+	pthread_mutex_unlock(&p->mutex);
 }
 
 void prepare(int item)
@@ -44,15 +70,15 @@ void prepare(int item)
 struct thread_data
 {
 	int id;
-    	list_t *p;                  
-    	two_d_buffer *q;
+    list_t *p;    //points to a linked list              
+    two_d_buffer *q;
 	int total;			//total items produced by a producer
 	pthread_barrier_t *p_barrier;
 };
 
 void* thread_consume(void* threadarg)
 {
-    	struct thread_data* my_data = (struct thread_data*) threadarg;
+    struct thread_data* my_data = (struct thread_data*) threadarg;
 	int id = my_data->id;
 	list_t *p = my_data->p;
 
@@ -62,7 +88,13 @@ void* thread_consume(void* threadarg)
 	
 	//TODO
 	//fill in code below to add n1, n2, and n3 to the linked-list pointed by p
+	pthread_mutex_lock(&p->mutex);
 
+	add_last(&p->head, &p->tail, n1);
+	add_last(&p->head, &p->tail, n2);
+	add_last(&p->head, &p->tail, n3);
+
+	pthread_mutex_unlock(&p->mutex);
 
 	pthread_barrier_t *p_barrier = my_data->p_barrier;
 	pthread_barrier_wait(p_barrier);
@@ -77,9 +109,9 @@ void* thread_consume(void* threadarg)
 void* thread_produce(void* threadarg)
 {   
 	struct thread_data* my_data = (struct thread_data*) threadarg;
-        list_t *p = my_data->p;
-        pthread_barrier_t *p_barrier = my_data->p_barrier;
-        pthread_barrier_wait(p_barrier);
+    list_t *p = my_data->p;
+    pthread_barrier_t *p_barrier = my_data->p_barrier;
+    pthread_barrier_wait(p_barrier);
 	two_d_buffer *q = my_data->q;
 
 	int done = 0;
@@ -87,12 +119,24 @@ void* thread_produce(void* threadarg)
 	{
 		//TODO
 		//fill in code below
+		pthread_mutex_lock(&p->mutex);
+		node *n = remove_first(&p->head, &p->tail);
+		pthread_mutex_unlock(&p->mutex);
 
-
+		if (n == NULL){
+			done = 1;
+			break;
+		}
+		int item = n->v;
+		prepare(item);
+		add_to_buffer(item, item, q);
+		free(n);
+		my_data->total ++;
 	}
 	 
-        pthread_exit(NULL);
+    pthread_exit(NULL);
 }
+
 int main(int argc, char *argv[])
 {
 	if(argc < 4) {
@@ -118,21 +162,22 @@ int main(int argc, char *argv[])
   
 	//initilize the 2d buffer
 	two_d_buffer *q = malloc(sizeof(two_d_buffer));
-        q->size = size;
-        q->remain = 3*n_consumer;
-        q->counts[0] = 0; q->counts[1] = 0; q->counts[2] = 0;
+    q->size = size;
+    q->remain = 3*n_consumer;
+    q->counts[0] = 0; q->counts[1] = 0; q->counts[2] = 0;
+
 	pthread_mutex_init(&q->mutex, NULL);
-    	pthread_cond_init (&q->produce_cond, NULL);
-    	pthread_cond_init (&q->consume_cond, NULL);
+    pthread_cond_init (&q->produce_cond, NULL);
+    pthread_cond_init (&q->consume_cond, NULL);
 
 	pthread_barrier_t barrier;
 	pthread_barrier_init(&barrier, NULL, n_consumer + n_producer); 
-    	pthread_t threads[n_consumer + n_producer];
-    	struct thread_data thread_data_array[n_consumer + n_producer];
-    	int rc, t;
+    pthread_t threads[n_consumer + n_producer];
+    struct thread_data thread_data_array[n_consumer + n_producer];
+    int rc, t;
 
 	for(t=0; t<n_consumer; t++ ) {
-        	thread_data_array[t].id = t;
+        thread_data_array[t].id = t;
 		thread_data_array[t].p = p;
 		thread_data_array[t].q = q;
 		thread_data_array[t].total = 0;
@@ -140,7 +185,7 @@ int main(int argc, char *argv[])
 		//TODO
 		//complete the following line of code
 
-		rc = pthread_create(&threads[t], NULL,  , &thread_data_array[t]);
+		rc = pthread_create(&threads[t], NULL,  thread_consume, &thread_data_array[t]);
         	if (rc) {
             		printf("ERROR; return code from pthread_create() is %d\n", rc);
             		exit(-1);
@@ -148,18 +193,18 @@ int main(int argc, char *argv[])
     	}
 
         for(t=0; t<n_producer; t++ ) {
-                thread_data_array[n_consumer + t].id = t;
-                thread_data_array[n_consumer + t].p = p;
-                thread_data_array[n_consumer + t].q = q;
-		thread_data_array[n_consumer + t].total = 0;
-		thread_data_array[n_consumer + t].p_barrier = &barrier;
+            thread_data_array[n_consumer + t].id = t;
+            thread_data_array[n_consumer + t].p = p;
+            thread_data_array[n_consumer + t].q = q;
+			thread_data_array[n_consumer + t].total = 0;
+			thread_data_array[n_consumer + t].p_barrier = &barrier;
 		//TODO
 		//complete the follow line of code
-                rc = pthread_create(&threads[n_consumer + t], NULL, , &thread_data_array[n_consumer + t]);
-                if (rc) {
-                        printf("ERROR; return code from pthread_create() is %d\n", rc);
-                        exit(-1);
-                }
+            rc = pthread_create(&threads[n_consumer + t], NULL, thread_produce, &thread_data_array[n_consumer + t]);
+            if (rc) {
+                printf("ERROR; return code from pthread_create() is %d\n", rc);
+                exit(-1);
+            }
         }
 
     	for(t=0; t<n_consumer + n_producer; t++ ) 
@@ -174,12 +219,13 @@ int main(int argc, char *argv[])
 	int total = 0;
 	//TODO
 	//fill in code below
-	
+	for (int i = 0; i < n_producer; i ++)
+		total += thread_data_array[n_consumer + i].total;
 
 	printf("total = %d\n", total);
  
-    	pthread_mutex_destroy(&p->mutex);
-    	free(p);
+    pthread_mutex_destroy(&p->mutex);
+    free(p);
 
 	pthread_mutex_destroy(&q->mutex);
 	pthread_cond_destroy(&q->consume_cond);
@@ -187,5 +233,5 @@ int main(int argc, char *argv[])
 	free(q);
 
 	pthread_barrier_destroy(&barrier);	
-    	return 0;
+    return 0;
 }
